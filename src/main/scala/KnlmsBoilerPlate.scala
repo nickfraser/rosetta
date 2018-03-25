@@ -178,7 +178,7 @@ class PackWords(w_in: Int, w_out: Int) extends Module {
   }
   val pack_factor: Int = w_out / w_in
   // Create a vector of queues so we can parallel load them.
-  val shift = Vec.fill(pack_factor){ Module(new Queue(UInt(width=w_in), 1)).io }
+  val shift = Vec.fill(pack_factor){ Module(new Queue(UInt(width=w_in), 1, pipe=true)).io }
   val is_valid = Vec.fill(pack_factor) { Bool() }
 
   // Connect the output queue to the output of the module.
