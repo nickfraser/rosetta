@@ -67,7 +67,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   io.finished := writer.finished
 
   // Instantiate a dummy accelerator and connect to the streams.
-  val accel = Module(new ValidToDecoupledWrapper(32, 16)).io
+  val accel = Module(new ValidToDecoupledWrapper(16, 16)).io
   val preproc = Module(new UnpackWords(32, 16)).io // Unpack words to send the accelerator.
   val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
   preproc.in <> reader.out
