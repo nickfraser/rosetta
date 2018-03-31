@@ -4,6 +4,7 @@ import Chisel._
 import fpgatidbits.dma._
 import fpgatidbits.streams._
 import fpgatidbits.PlatformWrapper._
+import PKAF._
 
 // Create a template to drop in a KNLMS Accelerator.
 // Read in a 32-bit word, convert to two 16-bit words and push into a 
@@ -67,7 +68,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   io.finished := writer.finished
 
   // Instantiate a dummy accelerator and connect to the streams.
-  val accel = Module(new ValidToDecoupledWrapper(32, 16)).io
+  val accel = Module(new ValidToDecoupledWrapper(32, 8)).io
   val preproc = Module(new UnpackWords(32, 16)).io // Unpack words to send the accelerator.
   val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
   preproc.in <> reader.out
@@ -110,17 +111,36 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
     val in = Decoupled(UInt(width=w)).flip
     val out = Decoupled(UInt(width=w))
   }
-  val accel = Module(new Pipe(UInt(width=w), pipeLength)).io // A standard pipe similar to my hardware with a valid interface.
+  //val accel = Module(new Pipe(UInt(width=w), pipeLength)).io // A standard pipe similar to my hardware with a valid interface.
   val queue = Module(new Queue(UInt(width=w), pipeLength)).io // A fall-through FIFO with a decoupled interface for I/O
+
+  // Define the KNLMS style accelerator.
+  val n: Int = 2
+  val m: Int = 2
+  //val w: Int = 16
+  val iL: Int = 4
+  val pdiv: Int = 0
+  val pexp: Int = 0
+  val gamma: Double = 1.479593
+  val mu0: Double = 0.689559
+  val epsilon: Double = 0.049815
+  val eta: Double = 0.153729
+  val fromD: Double => PsspFixed = PsspFixed(_, w, iL, 0, 0, 0, pdiv, 0)
+  val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, _)
+  val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, 0)
+  val (divDelay, expDelay) = (0, 0)
+  val delay = pipeLength // doReg is of size {(log2(m) + 4) + (2) + (log2(n) + 1) + 1 + (3)} + a*pmul + b*pdiv + c*padd + d*psub + e*pexp + f*pgt
+  val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
+  val knlms = Module(new KNLMSTimeSeriesWrapper[PsspFixed](PsspFixed(width=w,iL=iL,pdiv=pdiv), -gamma, mu0, epsilon, eta, doReg, n, m, _*_, div, _+_, _-_, exp, _ > _, fromD, pdiv=pdiv, pexp=pexp)).io
 
   // Connect the output to the queue.
   io.out <> queue.deq
 
   // Connect input data to the Pipe.
-  accel.enq.bits := io.in.bits
+  knlms.y := PsspFixed(width=w,iL=iL,pdiv=pdiv).castToPsspFixed(chiselCast(io.in.bits){ SInt() }, w, iL, 0, 0, 0, pdiv, 0)
   // Connect accel data to the queue.
-  queue.enq.bits := accel.deq.bits
-  queue.enq.valid := accel.deq.valid
+  queue.enq.bits := chiselCast(knlms.ybar){ UInt() }
+  queue.enq.valid := knlms.valid_out
 
   // Create a ready signal to connect to the input.
   val ready = io.out.ready & queue.enq.ready
@@ -128,7 +148,7 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
 
   // Create a valid signal to connect to the accelerator.
   val valid = io.in.valid & ready
-  accel.enq.valid := valid
+  knlms.valid_in := valid
 }
 
 // A class to unpack words from larger words to smaller sub-words.
