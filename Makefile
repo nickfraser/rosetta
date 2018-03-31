@@ -22,6 +22,7 @@ BUILD_DIR_EMULIB_CPP := $(BUILD_DIR)/hw/cpp_emulib
 VERILOG_SRC_DIR := $(TOP)/src/main/verilog
 DRV_SRC_DIR := $(TOP)/src/main/cpp/regdriver
 APP_SRC_DIR := $(TOP)/src/main/cpp/app
+RESOURCE_DIR := $(TOP)/src/main/resources
 VIVADO_PROJ_SCRIPT := $(TOP)/src/main/script/host/make-vivado-project.tcl
 VIVADO_SYNTH_SCRIPT := $(TOP)/src/main/script/host/synth-vivado-project.tcl
 PYNQ_SCRIPT_DIR := $(TOP)/src/main/script/pynq
@@ -73,7 +74,7 @@ pynq_hw: bitfile
 
 # copy all user sources and driver sources to the deployment folder
 pynq_sw: hw_driver
-	mkdir -p $(BUILD_DIR_PYNQ); cp $(BUILD_DIR_HWDRV)/* $(BUILD_DIR_PYNQ)/; cp -r $(APP_SRC_DIR)/* $(BUILD_DIR_PYNQ)/
+	mkdir -p $(BUILD_DIR_PYNQ); cp $(BUILD_DIR_HWDRV)/* $(BUILD_DIR_PYNQ)/; cp -r $(APP_SRC_DIR)/* $(BUILD_DIR_PYNQ)/; cp $(RESOURCES_DIR)/* $(BUILD_DIR_PYNQ)/
 
 # copy scripts to the deployment folder
 pynq_script:

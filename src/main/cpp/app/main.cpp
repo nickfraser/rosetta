@@ -1,4 +1,7 @@
 #include <iostream>
+#include <fstream>
+#include <string>
+#include <cmath>
 using namespace std;
 #include "platform.h"
 
@@ -47,6 +50,11 @@ void Run_DRAMExample(WrapperRegDriver * platform) {
 }
 */
 
+union PackedWords {
+  unsigned int word;
+  signed short data[2];
+};
+
 // uncomment this block for the MemCpy example which runs through a pipe with a KNLMS style interface.
 #include "KnlmsBoilerPlate.hpp"
 void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
@@ -54,21 +62,51 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
-  // why divisible by 16? fpgatidbits DMA components may not work if the
-  // number of bytes is not divisible by 64. since we are using 4-byte words,
-  // 16*4=64 ensures divisibility.
-  cout << "Enter upper bound of sum sequence, divisible by 16: " << endl;
+  unsigned int packing_factor = 2;
+  // why divisible by 32? fpgatidbits DMA components may not work if the
+  // number of bytes is not divisible by 64. since we are using 2-byte words,
+  // 32*2=64 ensures divisibility.
+  cout << "Enter upper bound of sequence length, divisible by 32: " << endl;
   cin >> ub;
-  if(ub % 16 != 0) {
-    cout << "Error: Upper bound must be divisible by 16" << endl;
+  if(ub % 32 != 0) {
+    cout << "Error: Upper bound must be divisible by 32" << endl;
     return;
   }
+  ub = ub / packing_factor;
 
   unsigned int * hostSrcBuf = new unsigned int[ub];
   unsigned int * hostDstBuf = new unsigned int[ub];
   unsigned int bufsize = ub * sizeof(unsigned int);
+  unsigned int wordsize = sizeof(unsigned int) / packing_factor;
 
-  for(unsigned int i = 0; i < ub; i++) { hostSrcBuf[i] = i+1; }
+  // Load elements of mackey glass series, and pack them into the src buffer.
+  ifstream myfile;
+  myfile.open("mg.csv");
+  int iL = 4;
+  int fL = wordsize*8 - iL - 1;
+  #ifdef DEBUG
+  cout << "Wordlength: " << wordsize << endl;
+  cout << "fL: " << fL << endl;
+  cout << "Input value, Fixed value," << endl;
+  #endif
+  for(unsigned int i = 0; i < ub; i++) {
+    hostSrcBuf[i] = 0;
+    for(unsigned int j = 0; j < packing_factor; j++) {
+      string str;
+      float val;
+      PackedWords * curVals = reinterpret_cast<PackedWords *>(&hostSrcBuf[i]);
+      getline(myfile, str);
+      val = stof(str);
+      signed short fxd_val;
+      fxd_val = static_cast<signed short>(round(val*pow(2,fL)));
+      #ifdef DEBUG
+      cout << val << ", ";
+      cout << fxd_val << endl;
+      #endif
+      curVals->data[j] = fxd_val;
+    }
+  }
+  myfile.close();
 
   void * accelSrcBuf = platform->allocAccelBuffer(bufsize);
   void * accelDstBuf = platform->allocAccelBuffer(bufsize);
@@ -88,26 +126,22 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   platform->deallocAccelBuffer(accelSrcBuf);
   platform->deallocAccelBuffer(accelDstBuf);
 
-  int words = 0;
-  bool success = true;
-  for(unsigned int i = 0; i < ub; i++) {
-    if (hostSrcBuf[i] != hostDstBuf[i]) {
-      words = i;
-      success = false;
-      break;
-    }
+  // Print result to cout.
+  cout << "Predicted value, Real value," << endl;
+  for(unsigned int i = 0; i < ub*packing_factor-1; i++) {
+    unsigned int read_index = i+1;
+    unsigned int pred_index = i;
+    unsigned int rwi = read_index / packing_factor;
+    unsigned int rswi = read_index % packing_factor;
+    unsigned int pwi = pred_index / packing_factor;
+    unsigned int pswi = pred_index % packing_factor;
+    PackedWords * read_word = reinterpret_cast<PackedWords *>(&hostSrcBuf[rwi]);
+    PackedWords * pred_word = reinterpret_cast<PackedWords *>(&hostDstBuf[pwi]);
+    float read_val = static_cast<float>(read_word->data[rswi])*pow(2,-fL);
+    float pred_val = static_cast<float>(pred_word->data[pswi])*pow(2,-fL);
+    cout << pred_val << ", " << read_val << endl;
   }
-  if (success) words = ub;
 
-  if (success) {
-    cout << words << " words copied successfully!" << endl;
-  } else {
-    cout << "Error at word: " << words << endl;
-    cout << "Source, Dest" << endl;
-    for(unsigned int i = 0; i < ub; i++) {
-      cout << hostSrcBuf[i] << ", " << hostDstBuf[i] << endl;
-    }
-  }
   unsigned int cc = t.get_cycleCount();
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
   t.set_start(0);
