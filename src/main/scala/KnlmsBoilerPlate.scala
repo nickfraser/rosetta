@@ -115,31 +115,31 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val queue = Module(new Queue(UInt(width=w), pipeLength)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Define the KNLMS style accelerator.
-  val n: Int = 2
-  val m: Int = 2
-  //val w: Int = 16
-  val iL: Int = 4
-  val pdiv: Int = 0
-  val pexp: Int = 0
+  val n: Int = 32
+  val m: Int = 7
+  val wL: Int = 18
+  val iL: Int = 6
+  val (divDelay, expDelay) = (6, 5)
+  val delay = pipeLength // doReg is of size {(log2(m) + 4) + (2) + (log2(n) + 1) + 1 + (3)} + a*pmul + b*pdiv + c*padd + d*psub + e*pexp + f*pgt
+  val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
+  val pdiv: Int = CountReg.nreg(divReg)
+  val pexp: Int = CountReg.nreg(expReg)
   val gamma: Double = 1.479593
   val mu0: Double = 0.689559
   val epsilon: Double = 0.049815
   val eta: Double = 0.153729
-  val fromD: Double => PsspFixed = PsspFixed(_, w, iL, 0, 0, 0, pdiv, 0)
-  val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, _)
-  val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, 0)
-  val (divDelay, expDelay) = (0, 0)
-  val delay = pipeLength // doReg is of size {(log2(m) + 4) + (2) + (log2(n) + 1) + 1 + (3)} + a*pmul + b*pdiv + c*padd + d*psub + e*pexp + f*pgt
-  val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
-  val knlms = Module(new KNLMSTimeSeriesWrapper[PsspFixed](PsspFixed(width=w,iL=iL,pdiv=pdiv), -gamma, mu0, epsilon, eta, doReg, n, m, _*_, div, _+_, _-_, exp, _ > _, fromD, pdiv=pdiv, pexp=pexp)).io
+  val fromD: Double => PsspFixed = PsspFixed(_, wL, iL, 0, 0, 0, pdiv, 0)
+  val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, divReg, _)
+  val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, expReg)
+  val knlms = Module(new KNLMSTimeSeriesWrapper[PsspFixed](PsspFixed(width=wL,iL=iL,pdiv=pdiv), -gamma, mu0, epsilon, eta, doReg, n, m, _*_, div, _+_, _-_, exp, _ > _, fromD, pdiv=pdiv, pexp=pexp, singleDelay=false, addMask=true)).io
 
   // Connect the output to the queue.
   io.out <> queue.deq
 
   // Connect input data to the Pipe.
-  knlms.y := PsspFixed(width=w,iL=iL,pdiv=pdiv).castToPsspFixed(chiselCast(io.in.bits){ SInt() }, w, iL, 0, 0, 0, pdiv, 0)
+  knlms.y := PsspFixed(width=wL,iL=iL,pdiv=pdiv).castToPsspFixed(chiselCast(Cat(UInt(0,width=wL-w),io.in.bits)){ SInt() }, w, iL, 0, 0, 0, pdiv, 0)
   // Connect accel data to the queue.
-  queue.enq.bits := chiselCast(knlms.ybar){ UInt() }
+  queue.enq.bits := chiselCast(knlms.ybar(w-1,0)){ UInt() }
   queue.enq.valid := knlms.valid_out
 
   // Create a ready signal to connect to the input.
