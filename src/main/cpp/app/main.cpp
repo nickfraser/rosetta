@@ -128,18 +128,14 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 
   // Print result to cout.
   cout << "Predicted value, Real value," << endl;
-  for(unsigned int i = 0; i < ub*packing_factor-1; i++) {
-    unsigned int read_index = i+1;
-    unsigned int pred_index = i;
-    unsigned int rwi = read_index / packing_factor;
-    unsigned int rswi = read_index % packing_factor;
-    unsigned int pwi = pred_index / packing_factor;
-    unsigned int pswi = pred_index % packing_factor;
-    PackedWords * read_word = reinterpret_cast<PackedWords *>(&hostSrcBuf[rwi]);
-    PackedWords * pred_word = reinterpret_cast<PackedWords *>(&hostDstBuf[pwi]);
-    float read_val = static_cast<float>(read_word->data[rswi])*pow(2,-fL);
-    float pred_val = static_cast<float>(pred_word->data[pswi])*pow(2,-fL);
-    cout << pred_val << ", " << read_val << endl;
+  for(unsigned int i = 0; i < ub; i++) {
+    for(unsigned int j = 0; j < packing_factor; j++) {
+      PackedWords * read_word = reinterpret_cast<PackedWords *>(&hostSrcBuf[i]);
+      PackedWords * pred_word = reinterpret_cast<PackedWords *>(&hostDstBuf[i]);
+      float read_val = static_cast<float>(read_word->data[j])*pow(2,-fL);
+      float pred_val = static_cast<float>(pred_word->data[j])*pow(2,-fL);
+      cout << pred_val << ", " << read_val << endl;
+    }
   }
 
   unsigned int cc = t.get_cycleCount();
