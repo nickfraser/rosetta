@@ -61,19 +61,22 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   // IMPORTANT: it's best to provide a byteCount which is divisible by
   // 64, as the fpgatidbits streaming DMA components have some limitations.
   reader.byteCount := io.byteCount
-  writer.byteCount := io.byteCount
+  writer.byteCount := io.byteCount*UInt(2)
 
   // indicate when the transfer is finished.
   io.finished := writer.finished
 
   // Instantiate a dummy accelerator and connect to the streams.
-  val accel = Module(new ValidToDecoupledWrapper(32, 16)).io
+  val accel = Module(new ValidToDecoupledWrapper(16, 8)).io
   val preproc = Module(new UnpackWords(32, 16)).io // Unpack words to send the accelerator.
-  val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
+  //val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
+  val queue = Module(new Queue(UInt(width=32), 8, pipe=true)).io // A small buffer queue to the output to try to improve write performance.
   preproc.in <> reader.out
   accel.in <> preproc.out
-  postproc.in <> accel.out
-  writer.in <> postproc.out
+  //postproc.in <> accel.out
+  //queue.enq <> postproc.out
+  queue.enq <> accel.out
+  writer.in <> queue.deq
 
   // wire up the read requests-responses against the memory port interface
   reader.req <> io.memPort(0).memRdReq
@@ -111,7 +114,7 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
     val out = Decoupled(UInt(width=w))
   }
   val accel = Module(new Pipe(UInt(width=w), pipeLength)).io // A standard pipe similar to my hardware with a valid interface.
-  val queue = Module(new Queue(UInt(width=w), pipeLength)).io // A fall-through FIFO with a decoupled interface for I/O
+  val queue = Module(new Queue(UInt(width=w), pipeLength, pipe=true)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Connect the output to the queue.
   io.out <> queue.deq
