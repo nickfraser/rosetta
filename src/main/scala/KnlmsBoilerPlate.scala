@@ -68,7 +68,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   io.finished := writer.finished
 
   // Instantiate a dummy accelerator and connect to the streams.
-  val accel = Module(new ValidToDecoupledWrapper(16, 8)).io
+  val accel = Module(new ValidToDecoupledWrapper(16, 15)).io
   val preproc = Module(new UnpackWords(32, 16)).io // Unpack words to send the accelerator.
   val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
   preproc.in <> reader.out
@@ -115,7 +115,7 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val queue = Module(new Queue(UInt(width=w), pipeLength)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Define the KNLMS style accelerator.
-  val n: Int = 32
+  val n: Int = 50
   val m: Int = 7
   val wL: Int = 18
   val iL: Int = 6
@@ -124,10 +124,10 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
   val pdiv: Int = CountReg.nreg(divReg)
   val pexp: Int = CountReg.nreg(expReg)
-  val gamma: Double = 1.479593
-  val mu0: Double = 0.689559
-  val epsilon: Double = 0.049815
-  val eta: Double = 0.153729
+  val gamma: Double = 2.380390
+  val mu0: Double = 0.837843
+  val epsilon: Double = 0.066796
+  val eta: Double = 0.052855
   val fromD: Double => PsspFixed = PsspFixed(_, wL, iL, 0, 0, 0, pdiv, 0)
   val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, divReg, _)
   val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, expReg)
