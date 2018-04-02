@@ -61,7 +61,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   // IMPORTANT: it's best to provide a byteCount which is divisible by
   // 64, as the fpgatidbits streaming DMA components have some limitations.
   reader.byteCount := io.byteCount
-  writer.byteCount := io.byteCount*UInt(2)
+  writer.byteCount := io.byteCount
 
   // indicate when the transfer is finished.
   io.finished := writer.finished
@@ -69,14 +69,11 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   // Instantiate a dummy accelerator and connect to the streams.
   val accel = Module(new ValidToDecoupledWrapper(16, 8)).io
   val preproc = Module(new UnpackWords(32, 16)).io // Unpack words to send the accelerator.
-  //val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
-  val queue = Module(new Queue(UInt(width=32), 8, pipe=true)).io // A small buffer queue to the output to try to improve write performance.
+  val postproc = Module(new PackWords(16, 32)).io // Repack words to send back to memory.
   preproc.in <> reader.out
   accel.in <> preproc.out
-  //postproc.in <> accel.out
-  //queue.enq <> postproc.out
-  queue.enq <> accel.out
-  writer.in <> queue.deq
+  postproc.in <> accel.out
+  writer.in <> postproc.out
 
   // wire up the read requests-responses against the memory port interface
   reader.req <> io.memPort(0).memRdReq
@@ -157,7 +154,11 @@ class UnpackWords(w_in: Int, w_out: Int) extends Module {
 
   // Connect inputs to queues and make is_empty vector.
   for(i <- 0 until pack_factor) {
-    is_empty(i) := !shift(i).deq.valid
+    if(i == 0) {
+      is_empty(i) := Bool(true) // It doesn't matter if the output queue is ready.
+    } else {
+      is_empty(i) := !shift(i).deq.valid
+    }
     is_ready(i) := shift(i).enq.ready
     when(fire) { // Parallel load from input
       shift(i).enq.valid := io.in.valid
