@@ -11,5 +11,6 @@ lazy val rosettaSettings = Seq (
   libraryDependencies += "org.scala-lang" % "scala-compiler" % scalaVer
 )
 
+concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 lazy val rosetta_template = (project in file(".")).settings(rosettaSettings: _*).dependsOn(ProjectRef(uri("https://github.com/maltanar/fpga-tidbits.git#pynq"), "fpgatidbits"))
