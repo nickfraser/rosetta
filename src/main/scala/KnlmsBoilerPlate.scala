@@ -112,7 +112,7 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
     val out = Decoupled(UInt(width=w))
   }
   //val accel = Module(new Pipe(UInt(width=w), pipeLength)).io // A standard pipe similar to my hardware with a valid interface.
-  val queue = Module(new Queue(UInt(width=w), pipeLength)).io // A fall-through FIFO with a decoupled interface for I/O
+  val queue = Module(new Queue(UInt(width=w), pipeLength, pipe=true)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Define the KNLMS style accelerator.
   val n: Int = 62
@@ -174,7 +174,11 @@ class UnpackWords(w_in: Int, w_out: Int) extends Module {
 
   // Connect inputs to queues and make is_empty vector.
   for(i <- 0 until pack_factor) {
-    is_empty(i) := !shift(i).deq.valid
+    if(i == 0) {
+      is_empty(i) := Bool(true) // It doesn't matter if the output queue is ready.
+    } else {
+      is_empty(i) := !shift(i).deq.valid
+    }
     is_ready(i) := shift(i).enq.ready
     when(fire) { // Parallel load from input
       shift(i).enq.valid := io.in.valid
