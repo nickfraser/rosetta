@@ -131,9 +131,13 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   t.set_destAddr((AccelDblReg) accelDstBuf);
   t.set_byteCount(bufsize);
 
+  clock_gettime(CLOCK_MONOTONIC, &tic);
+
   t.set_start(1);
 
   while(t.get_finished() != 1);
+
+  clock_gettime(CLOCK_MONOTONIC, &toc);
 
   platform->copyBufferAccelToHost(accelDstBuf, hostDstBuf, bufsize);
 
@@ -159,8 +163,8 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 
   total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
   cout << "Elapsed time(s): " << total_time << ", ";
-  cout << "Time per word(s): " << total_time/ub << ", ";
-  cout << "Frequency(Mhz): " << ub/(1000000*total_time) << endl;
+  cout << "Time per prediction(s): " << total_time/(ub*packing_factor) << ", ";
+  cout << "Frequency(Mhz): " << (packing_factor*ub)/(1000000*total_time) << endl;
 
   // Free host buffers.
   delete [] hostSrcBuf;
