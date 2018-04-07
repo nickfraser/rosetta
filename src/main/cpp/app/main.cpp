@@ -2,6 +2,7 @@
 #include <fstream>
 #include <string>
 #include <cmath>
+#include <ctime>
 using namespace std;
 #include "platform.h"
 
@@ -10,6 +11,8 @@ using namespace std;
 #include "DRAMExample.hpp"
 void Run_DRAMExample(WrapperRegDriver * platform) {
   DRAMExample t(platform);
+  struct timespec tic, toc;
+  float total_time;
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
@@ -35,9 +38,13 @@ void Run_DRAMExample(WrapperRegDriver * platform) {
   t.set_baseAddr((AccelDblReg) accelBuf);
   t.set_byteCount(bufsize);
 
+  clock_gettime(CLOCK_MONOTONIC, &tic);
+
   t.set_start(1);
 
   while(t.get_finished() != 1);
+
+  clock_gettime(CLOCK_MONOTONIC, &toc);
 
   platform->deallocAccelBuffer(accelBuf);
   delete [] hostBuf;
@@ -46,6 +53,12 @@ void Run_DRAMExample(WrapperRegDriver * platform) {
   cout << "Result = " << res << " expected " << golden << endl;
   unsigned int cc = t.get_cycleCount();
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
+
+  total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
+  cout << "Elapsed time(s): " << total_time << ", ";
+  cout << "Time per word(s): " << total_time/ub << ", ";
+  cout << "Frequency(Mhz): " << ub/(1000000*total_time) << endl;
+
   t.set_start(0);
 }
 */
@@ -59,6 +72,8 @@ union PackedWords {
 #include "KnlmsBoilerPlate.hpp"
 void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   KnlmsBoilerPlate t(platform);
+  struct timespec tic, toc;
+  float total_time;
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
@@ -142,6 +157,11 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
   t.set_start(0);
 
+  total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
+  cout << "Elapsed time(s): " << total_time << ", ";
+  cout << "Time per word(s): " << total_time/ub << ", ";
+  cout << "Frequency(Mhz): " << ub/(1000000*total_time) << endl;
+
   // Free host buffers.
   delete [] hostSrcBuf;
   delete [] hostDstBuf;
@@ -152,6 +172,8 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 #include "MemCpyExample.hpp"
 void Run_MemCpyExample(WrapperRegDriver * platform) {
   MemCpyExample t(platform);
+  struct timespec tic, toc;
+  float total_time;
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
@@ -179,9 +201,13 @@ void Run_MemCpyExample(WrapperRegDriver * platform) {
   t.set_destAddr((AccelDblReg) accelDstBuf);
   t.set_byteCount(bufsize);
 
+  clock_gettime(CLOCK_MONOTONIC, &tic);
+
   t.set_start(1);
 
   while(t.get_finished() != 1);
+
+  clock_gettime(CLOCK_MONOTONIC, &toc);
 
   platform->copyBufferAccelToHost(accelDstBuf, hostDstBuf, bufsize);
 
@@ -208,6 +234,12 @@ void Run_MemCpyExample(WrapperRegDriver * platform) {
   }
   unsigned int cc = t.get_cycleCount();
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
+
+  total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
+  cout << "Elapsed time(s): " << total_time << ", ";
+  cout << "Time per word(s): " << total_time/ub << ", ";
+  cout << "Frequency(Mhz): " << ub/(1000000*total_time) << endl;
+
   t.set_start(0);
 }
 */
