@@ -3,6 +3,7 @@
 #include <string>
 #include <cmath>
 #include <ctime>
+#include <cmath>
 using namespace std;
 #include "platform.h"
 
@@ -77,6 +78,7 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
+  unsigned int cp = 0;
   unsigned int packing_factor = 2;
   // why divisible by 32? fpgatidbits DMA components may not work if the
   // number of bytes is not divisible by 64. since we are using 2-byte words,
@@ -88,6 +90,13 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
     return;
   }
   ub = ub / packing_factor;
+  cout << "Please enter the number of samples in the convergence region." << endl;
+  cout << "I.e., the MSE calculation will begin after this many examples." << endl;
+  cin >> cp;
+  if(cp > ub) {
+    cout << "The convergence period must be less than the sequence length" << endl;
+    return;
+  }
 
   unsigned int * hostSrcBuf = new unsigned int[ub];
   unsigned int * hostDstBuf = new unsigned int[ub];
@@ -146,15 +155,26 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   platform->deallocAccelBuffer(accelDstBuf);
 
   // Print result to cout.
-  cout << "Predicted value, Real value," << endl;
-  for(unsigned int i = 0; i < ub; i++) {
-    for(unsigned int j = 0; j < packing_factor; j++) {
-      PackedWords * read_word = reinterpret_cast<PackedWords *>(&hostSrcBuf[i]);
-      PackedWords * pred_word = reinterpret_cast<PackedWords *>(&hostDstBuf[i]);
-      float read_val = static_cast<float>(read_word->data[j])*pow(2,-fL);
-      float pred_val = static_cast<float>(pred_word->data[j])*pow(2,-fL);
-      cout << pred_val << ", " << read_val << endl;
+  ofstream ofile("results.csv");
+  double mse = 0.0;
+  if(ofile.is_open()) {
+    ofile << "Predicted value, Real value," << endl;
+    for(unsigned int i = 0; i < ub; i++) {
+      for(unsigned int j = 0; j < packing_factor; j++) {
+        PackedWords * read_word = reinterpret_cast<PackedWords *>(&hostSrcBuf[i]);
+        PackedWords * pred_word = reinterpret_cast<PackedWords *>(&hostDstBuf[i]);
+        float read_val = static_cast<float>(read_word->data[j])*pow(2,-fL);
+        float pred_val = static_cast<float>(pred_word->data[j])*pow(2,-fL);
+        if(cp >= (i*packing_factor + j)) {
+          mse += pow(read_val - pred_val,2);
+        }
+        ofile << pred_val << ", " << read_val << endl;
+      }
     }
+    ofile.close();
+    mse /= (ub*packing_factor) - cp;
+  } else {
+    cout << "Unable to open output file." << endl;
   }
 
   unsigned int cc = t.get_cycleCount();
@@ -162,6 +182,7 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   t.set_start(0);
 
   total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
+  cout << "MSE: " << mse << ", ";
   cout << "Elapsed time(s): " << total_time << ", ";
   cout << "Time per prediction(s): " << total_time/(ub*packing_factor) << ", ";
   cout << "Frequency(Mhz): " << (packing_factor*ub)/(1000000*total_time) << endl;
