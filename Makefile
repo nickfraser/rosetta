@@ -32,7 +32,7 @@ GEN_BITFILE_PATH := $(BITFILE_PRJDIR)/$(BITFILE_PRJNAME).runs/impl_1/procsys_wra
 VIVADO_IN_PATH := $(shell command -v vivado 2> /dev/null)
 
 # note that all targets are phony targets, no proper dependency tracking
-.PHONY: hw_verilog hw_cpp hw_driver hw_vivadoproj bitfile pynq_hw pynq_sw pynq rsync test characterize check_vivado
+.PHONY: hw_verilog hw_cpp hw_driver hw_vivadoproj bitfile pynq_hw pynq_sw pynq rsync test characterize check_vivado dist-clean
 
 check_vivado:
 ifndef VIVADO_IN_PATH
@@ -89,3 +89,6 @@ rsync:
 # remove everything that is built
 clean:
 	rm -rf $(BUILD_DIR)
+
+dist-clean: clean
+	rm -rf $(TOP)/.Xil/ $(TOP)/project/project/ $(TOP)/project/target/ $(TOP)/target/ vivado*
