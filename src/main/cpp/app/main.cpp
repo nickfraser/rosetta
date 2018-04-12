@@ -3,6 +3,7 @@
 using namespace std;
 #include "platform.h"
 
+/*
 // uncomment this block for the DRAMExample
 #include "DRAMExample.hpp"
 void Run_DRAMExample(WrapperRegDriver * platform) {
@@ -57,8 +58,8 @@ void Run_DRAMExample(WrapperRegDriver * platform) {
 
   t.set_start(0);
 }
+*/
 
-/*
 // uncomment this block for the MemCpy example
 #include "MemCpyExample.hpp"
 void Run_MemCpyExample(WrapperRegDriver * platform) {
@@ -133,7 +134,6 @@ void Run_MemCpyExample(WrapperRegDriver * platform) {
 
   t.set_start(0);
 }
-*/
 
 /*
 // uncomment this block for the BRAMExample
@@ -234,8 +234,8 @@ int main()
   //Run_TestRegOps(platform);
   //Run_TestAccumulateVector(platform);
   //Run_BRAMExample(platform);
-  //Run_MemCpyExample(platform);
-  Run_DRAMExample(platform);
+  Run_MemCpyExample(platform);
+  //Run_DRAMExample(platform);
 
   deinitPlatform(platform);
 
