@@ -321,7 +321,7 @@ set_property -dict [ list \
 # enable AXI HP ports, set target frequency
 set_property -dict [list CONFIG.PSU__USE__S_AXI_GP2 {1} CONFIG.PSU__USE__S_AXI_GP3 {1} CONFIG.PSU__USE__S_AXI_GP4 {1} CONFIG.PSU__USE__S_AXI_GP5 {1}] $zups
 # Set the bitwidth of the AXI ports.
-set_property -dict [list CONFIG.PSU__SAXIGP2__DATA_WIDTH {32} CONFIG.PSU__SAXIGP3__DATA_WIDTH {32} CONFIG.PSU__SAXIGP4__DATA_WIDTH {32} CONFIG.PSU__SAXIGP5__DATA_WIDTH {32}] $zups
+set_property -dict [list CONFIG.PSU__SAXIGP2__DATA_WIDTH {128} CONFIG.PSU__SAXIGP3__DATA_WIDTH {128} CONFIG.PSU__SAXIGP4__DATA_WIDTH {128} CONFIG.PSU__SAXIGP5__DATA_WIDTH {128}] $zups
 #THIS set_property -dict [list CONFIG.PCW_USE_S_AXI_HP0 {1} CONFIG.PCW_USE_S_AXI_HP1 {1} CONFIG.PCW_USE_S_AXI_HP2 {1} CONFIG.PCW_USE_S_AXI_HP3 {1}] $ps7
 # TODO expose top-level ports?
 #THIS #set_property -dict [list CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ $config_freq CONFIG.PCW_USE_S_AXI_HP0 {1} CONFIG.PCW_USE_S_AXI_HP1 {1} CONFIG.PCW_USE_S_AXI_HP2 {1} CONFIG.PCW_USE_S_AXI_HP3 {1}] [get_bd_cells processing_system7_0]
