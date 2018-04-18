@@ -116,14 +116,17 @@ void Run_MemCpyExample(WrapperRegDriver * platform) {
     }
   }
   if (success) words = ub;
-  delete [] hostSrcBuf;
-  delete [] hostDstBuf;
-
   if (success) {
     cout << words << " words copied successfully!" << endl;
   } else {
     cout << "Error at word: " << words << endl;
+    for(unsigned int i = words == 0 ? words : words-1; i < (words+10) && i < ub; ++i) {
+      cout << "word: " << i << " - expected: " << hostSrcBuf[i] << " received: " << hostDstBuf[i] << endl;
+    }
   }
+  delete [] hostSrcBuf;
+  delete [] hostDstBuf;
+
   unsigned int cc = t.get_cycleCount();
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
 
