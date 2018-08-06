@@ -106,7 +106,7 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   // Load elements of mackey glass series, and pack them into the src buffer.
   ifstream myfile;
   myfile.open("mg.csv");
-  int iL = 4;
+  int iL = 3;
   int fL = wordsize*8 - iL - 1;
   #ifdef DEBUG
   cout << "Wordlength: " << wordsize << endl;
