@@ -79,6 +79,7 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   cout << "Signature: " << hex << t.get_signature() << dec << endl;
   unsigned int ub = 0;
   unsigned int cp = 0;
+  unsigned int loops = 0;
   unsigned int packing_factor = 2;
   // why divisible by 32? fpgatidbits DMA components may not work if the
   // number of bytes is not divisible by 64. since we are using 2-byte words,
@@ -90,6 +91,10 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
     return;
   }
   ub = ub / packing_factor;
+
+  cout << "How many times should we run the training loop? 1 = 1 pass over the dataset, more (~10000) is useful for longer power measurements" << endl;
+  cin >> loops;
+
   cout << "Please enter the number of samples in the convergence region." << endl;
   cout << "I.e., the MSE calculation will begin after this many examples." << endl;
   cin >> cp;
@@ -140,19 +145,29 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   t.set_destAddr((AccelDblReg) accelDstBuf);
   t.set_byteCount(bufsize);
 
+  cout << "Calling PL to run training loop... ";
+
   clock_gettime(CLOCK_MONOTONIC, &tic);
 
-  t.set_start(1);
+  for(unsigned int i = 0; i < loops; i++) {
+    t.set_start(1);
 
-  while(t.get_finished() != 1);
+    while(t.get_finished() != 1);
+
+    t.set_start(0);
+  }
 
   clock_gettime(CLOCK_MONOTONIC, &toc);
+
+  cout << "done!" << endl;
 
   platform->copyBufferAccelToHost(accelDstBuf, hostDstBuf, bufsize);
 
   // Free accelerator buffers.
   platform->deallocAccelBuffer(accelSrcBuf);
   platform->deallocAccelBuffer(accelDstBuf);
+
+  cout << "Calculating MSE... ";
 
   // Print result to cout.
   ofstream ofile("results.csv");
@@ -177,6 +192,8 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
     cout << "Unable to open output file." << endl;
   }
 
+  cout << "done!" << endl;
+
   unsigned int cc = t.get_cycleCount();
   cout << "#cycles = " << cc << " cycles per word = " << (float)cc/(float)ub << endl;
   t.set_start(0);
@@ -184,8 +201,9 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
   total_time = ((float)(toc.tv_nsec-tic.tv_nsec))/((float)1000000000) + (float)(toc.tv_sec-tic.tv_sec);
   cout << "MSE: " << mse << ", ";
   cout << "Elapsed time(s): " << total_time << ", ";
-  cout << "Time per prediction(s): " << total_time/(ub*packing_factor) << ", ";
-  cout << "Frequency(Mhz): " << (packing_factor*ub)/(1000000*total_time) << endl;
+  cout << "Loops: " << loops << ", ";
+  cout << "Time per prediction(s): " << total_time/(ub*packing_factor/loops) << ", ";
+  cout << "Frequency(Mhz): " << (packing_factor*ub)/(1000000*total_time/loops) << endl;
 
   // Free host buffers.
   delete [] hostSrcBuf;
