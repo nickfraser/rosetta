@@ -118,16 +118,16 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val n: Int = 62
   val m: Int = 7
   val wL: Int = 18
-  val iL: Int = 6
+  val iL: Int = 5
   val (divDelay, expDelay) = (6, 5)
   val delay = pipeLength // doReg is of size {(log2(m) + 4) + (2) + (log2(n) + 1) + 1 + (3)} + a*pmul + b*pdiv + c*padd + d*psub + e*pexp + f*pgt
   val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
   val pdiv: Int = CountReg.nreg(divReg)
   val pexp: Int = CountReg.nreg(expReg)
-  val gamma: Double = 2.380390
-  val mu0: Double = 0.837843
-  val epsilon: Double = 0.066796
-  val eta: Double = 0.052855
+  val gamma: Double = 0.884545
+  val mu0: Double = 0.746731
+  val epsilon: Double = 0.089980
+  val eta: Double = 0.067604
   val fromD: Double => PsspFixed = PsspFixed(_, wL, iL, 0, 0, 0, pdiv, 0)
   val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, divReg, _)
   val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, expReg)
