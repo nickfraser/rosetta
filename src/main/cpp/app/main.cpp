@@ -154,7 +154,8 @@ void Run_KnlmsBoilerPlate(WrapperRegDriver * platform) {
 
     while(t.get_finished() != 1);
 
-    t.set_start(0);
+    if (i != loops-1)
+        t.set_start(0);
   }
 
   clock_gettime(CLOCK_MONOTONIC, &toc);
