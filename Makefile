@@ -83,6 +83,10 @@ pynq_script:
 # get everything ready to copy onto the PYNQ
 pynq: pynq_hw pynq_sw pynq_script
 
+# Create an emulator version for (hopefully) easier debugging.
+emu:
+	mkdir -p "$(BUILD_DIR_EMULIB_CPP)"; $(SBT) $(SBT_FLAGS) "runMain rosetta.EmulatorMain $(BUILD_DIR_EMULIB_CPP)"
+
 # use rsync to synchronize contents of the deployment folder onto the PYNQ
 rsync:
 	rsync -avz $(BUILD_DIR_PYNQ) $(BOARD_URI)

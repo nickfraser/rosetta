@@ -10,9 +10,9 @@ import PKAF._
 // Read in a 32-bit word, convert to two 16-bit words and push into a 
 // FIFO with the same interface as the KNLMSTimeSeriesWrapperClass, then
 // pack two results into a 32-bit word and send to the writer.
-class KnlmsBoilerPlate() extends RosettaAccelerator {
+class KnlmsBoilerPlate(p: PlatformWrapperParams) extends GenericAccelerator(p) {
   val numMemPorts = 2
-  val io = new RosettaAcceleratorIF(numMemPorts) {
+  val io = new GenericAcceleratorIF(numMemPorts, p) {
     val start = Bool(INPUT)
     val finished = Bool(OUTPUT)
     val srcAddr = UInt(INPUT, width = 64)
@@ -28,7 +28,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   val rdP = new StreamReaderParams(
     streamWidth = 32, /* read a stream of 32 bits */
     fifoElems = 8,    /* add a stream FIFO of 8 elements */
-    mem = PYNQParams.toMemReqParams(),  /* PYNQ memory request parameters */
+    mem = PYNQZ1Params.toMemReqParams(),  /* PYNQ memory request parameters */
     maxBeats = 8, /* do not use bursts (set to e.g. 8 for better DRAM bandwidth)*/
     chanID = 0, /* stream ID for distinguishing between returned responses */
     disableThrottle = true  /* disable throttling */
@@ -43,7 +43,7 @@ class KnlmsBoilerPlate() extends RosettaAccelerator {
   // stream
   val wdP = new StreamWriterParams(
     streamWidth = 32, /* read a stream of 32 bits */
-    mem = PYNQParams.toMemReqParams(),  /* PYNQ memory request parameters */
+    mem = PYNQZ1Params.toMemReqParams(),  /* PYNQ memory request parameters */
     maxBeats = 1, /* do not use bursts (set to e.g. 8 for better DRAM bandwidth)*/
     chanID = 0 /* stream ID for distinguishing between returned responses */
   )

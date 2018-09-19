@@ -2,6 +2,8 @@ package rosetta
 
 import Chisel._
 import sys.process._
+import fpgatidbits.TidbitsMakeUtils
+import fpgatidbits.PlatformWrapper._
 
 object Settings {
   // Rosetta will use myInstFxn to instantiate your accelerator
@@ -9,8 +11,8 @@ object Settings {
   //val myInstFxn = {() => new TestRegOps()}
   //val myInstFxn = {() => new TestAccumulateVector(4)}
   //val myInstFxn = {() => new BRAMExample(1024)}
-  //val myInstFxn = {() => new MemCpyExample()}
-  val myInstFxn = {() => new KnlmsBoilerPlate()}
+  val myInstFxn = {() => new MemCpyExample()}
+  //val myInstFxn = {() => new KnlmsBoilerPlate(PYNQParams)}
   //val myInstFxn = {() => new DRAMExample()}
 }
 
@@ -58,5 +60,16 @@ object DriverMain {
     myModule.generateRegDriver(outDir)
     // copy additional driver files
     fileCopyBulk(drvSrcDir, outDir, myModule.platformDriverFiles)
+  }
+}
+
+// Make an emulator version that I can (hopefully) debug more easily
+object EmulatorMain {
+  def main(args: Array[String]): Unit = {
+    type AccelInstFxn = PlatformWrapperParams => GenericAccelerator
+    val outDir = args(0)
+    //val accInst = () => Module(new RosettaWrapper(Settings.myInstFxn))
+    val accInst: AccelInstFxn = {p => new KnlmsBoilerPlate(p)}
+    TidbitsMakeUtils.makeEmulatorLibrary(accInst, outDir, Seq("--std=c++11"))
   }
 }
