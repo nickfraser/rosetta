@@ -115,8 +115,8 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val queue = Module(new Queue(UInt(width=w), pipeLength+1, pipe=true)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Define the KNLMS style accelerator.
-  val n: Int = 62
-  val m: Int = 7
+  val n: Int = 16
+  val m: Int = 8
   val wL: Int = 18
   val iL: Int = 5
   val (divDelay, expDelay) = (6, 5)
