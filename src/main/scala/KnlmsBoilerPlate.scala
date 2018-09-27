@@ -112,14 +112,14 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
     val out = Decoupled(UInt(width=w))
   }
   //val accel = Module(new Pipe(UInt(width=w), pipeLength)).io // A standard pipe similar to my hardware with a valid interface.
-  val queue = Module(new Queue(UInt(width=w), pipeLength, pipe=true)).io // A fall-through FIFO with a decoupled interface for I/O
+  val queue = Module(new Queue(UInt(width=w), pipeLength+1, pipe=true)).io // A fall-through FIFO with a decoupled interface for I/O
 
   // Define the KNLMS style accelerator.
-  val n: Int = 62
+  val n: Int = 16
   val m: Int = 7
   val wL: Int = 18
   val iL: Int = 5
-  val (divDelay, expDelay) = (6, 5)
+  val (divDelay, expDelay) = (4, 3)
   val delay = pipeLength // doReg is of size {(log2(m) + 4) + (2) + (log2(n) + 1) + 1 + (3)} + a*pmul + b*pdiv + c*padd + d*psub + e*pexp + f*pgt
   val (doReg, expReg, divReg) = KNLMS.estimateDoReg(n, m, delay, divDelay, expDelay)
   val pdiv: Int = CountReg.nreg(divReg)
@@ -129,8 +129,8 @@ class ValidToDecoupledWrapper(w: Int, pipeLength: Int) extends Module {
   val epsilon: Double = 0.089980
   val eta: Double = 0.067604
   val fromD: Double => PsspFixed = PsspFixed(_, wL, iL, 0, 0, 0, pdiv, 0)
-  val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutLi(mu0, 1.0 + mu0*(n-1), 64, divReg, _)
-  val exp: PsspFixed => PsspFixed = _.expLutLi(-4, 0, 64, expReg)
+  val div: (PsspFixed, PsspFixed) => PsspFixed = _.divLutPow2(math.pow(2,-1), math.pow(2,-1) + 1023*math.pow(2,-7), 1024, divReg, _)
+  val exp: PsspFixed => PsspFixed = _.funLutPow2(-3.99609375, 0, math.exp(_), 1024, expReg)
   val knlms = Module(new KNLMSTimeSeriesWrapper[PsspFixed](PsspFixed(width=wL,iL=iL,pdiv=pdiv), -gamma, mu0, epsilon, eta, doReg, n, m, _*_, div, _+_, _-_, exp, _ > _, fromD, pdiv=pdiv, pexp=pexp, singleDelay=false, addMask=true)).io
 
   // Connect the output to the queue.
