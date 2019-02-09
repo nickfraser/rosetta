@@ -23,3 +23,17 @@ For Chisel accelerators, use the master branch. For Vivado HLS accelerators, use
 1. Have a look at the hardware description under the src/main/scala -- the accelerator definition is in Accelerator.scala, the "entry point" for code generation is in Main.scala, and the infrastructure (where the magic happens) is in Rosetta.scala
 2. Have a look at the example application under src/main/cpp/app -- note that it uses the auto-generated register driver to access the hardware signals. The register driver will be generated in build/hw/driver
 3. Have a look at what the different Makefile targets generate inside the build/ folder. You can also try launching Vivado with the make launch_vivado_gui target after the project has been generated.
+
+## DKNLMS Implementation
+An implementation of the Multi-Delayed Kernel Normalized Least Mean Squares algorithm (MDKNLMS) is available in this repository,
+supporting both the Pynq-Z1 board and the Ultra96 board.
+
+The implementations for the Pynq-Z1 / Ultra96 boards are available under the branches `knlms` / `knlms-zzsoc` respectively.
+Note, these branches require that the [KAF library](https://bitbucket.org/nick_fraser/knlms_core_gen) is installed.
+After which, do the following:
+1. Run `make pynq FREQ_MHZ=66.7` for Pynq-Z1, `make pynq FREQ_MHZ=187.5` for Ultra96
+1. Copy the build/rosetta folder the board
+1. `cd` into the rosetta folder on the board and run `sudo ./load_bitfile.sh` to load the bitstream
+1. Run `./compile_sw.sh` to build the host code
+1. Run `sudo ./app` to run the application, and follow the prompts for what experiment you wish to run (I usually enter `1`, `1000`, and `640000` for a performance experiment)
+
